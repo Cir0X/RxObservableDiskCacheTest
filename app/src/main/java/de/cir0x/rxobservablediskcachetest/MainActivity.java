@@ -47,11 +47,14 @@ public class MainActivity extends AppCompatActivity {
         httpBinService = retrofit.create(HttpBinService.class);
 
         cache = RxObservableDiskCache.create(
-            RxPaperBook.with("data_cache"),
-            TimeAndVersionPolicy.create(BuildConfig.VERSION_CODE),
-            TimeAndVersionPolicy.validate(Long.MAX_VALUE, BuildConfig.VERSION_CODE));
+                RxPaperBook.with("data_cache"),
+                TimeAndVersionPolicy.create(BuildConfig.VERSION_CODE),
+                TimeAndVersionPolicy.validate(Long.MAX_VALUE, BuildConfig.VERSION_CODE));
 
-        RxView.clicks(button).subscribe(click -> getDataWithEnabledCache().subscribe(httpBinResponseObserver));
+        RxView.clicks(button)
+                .flatMap(click -> getDataWithEnabledCache().onErrorResumeNext(Observable.empty()))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(httpBinResponseObserver);
     }
 
     private Observable<Cached<HttpBinResponse, TimeAndVersionPolicy>> getDataWithEnabledCache() {
@@ -61,7 +64,6 @@ public class MainActivity extends AppCompatActivity {
     private Single<HttpBinResponse> getData() {
         return httpBinService.getData()
                 .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
 //                .onErrorReturn(throwable -> new HttpBinResponse("127.0.0.1", "http://127.0.0.1/post"))
                 .toSingle();
     }
